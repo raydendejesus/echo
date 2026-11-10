@@ -36,6 +36,17 @@ now load only when first used), and the dashboard stops doing work it doesn't ne
 mode**: open Echo in December and it offers Christmas mode - a red theme, gentle snow, and "All I Want for
 Christmas Is You" if Spotify is connected (plus New Year's, Valentine's and Halloween).
 
+## [`echo-8/`](echo-8/) - Echo-8: Echo over
+
+**ECHO MINI IS ON BY DEFAULT** - Echo's own brain is kept for the owner, and everyone else (callers,
+contacts) talks to Echo Mini, a small brain that loads only while it's needed; switch it off for two
+full Echos at once. Also: Echo finally receives its own rulebook at the dashboard (Ollama had been
+silently dropping it) and the rulebook is a third the size; compact 8-bit context memory on by default,
+with a choice of how much Echo can keep in view; a **calendar** (events with times, places and spoken
+reminders); **sound outputs** - Echo's voice on your headphones and a speaker for white noise and
+wake-up alarms; 3D generation no longer squeezes Echo's brain; browser control of the whole browser; and
+a GitHub page - "check the echo GitHub", "go to the echo GitHub".
+
 ## Security fix for every version
 
 If you run any version with phone calling: the public ngrok tunnel used for calls used to forward
@@ -46,7 +57,7 @@ automatically. Update to the current files. Details in [`echo-6/README.md`](echo
 
 ## Which one should I run?
 
-`echo-7`, unless you have a specific reason to want an earlier version's exact behavior. Start with [`echo-7/README.md`](echo-7/README.md); the full guide to what Echo can do is [`echo-6/README.md`](echo-6/README.md).
+`echo-8`, unless you have a specific reason to want an earlier version's exact behavior. Start with [`echo-8/README.md`](echo-8/README.md); the full guide to what Echo can do is [`echo-6/README.md`](echo-6/README.md).
 
 ## License
 
