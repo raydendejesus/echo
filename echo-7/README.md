@@ -82,10 +82,22 @@ slower - and this release had to stay at least as fast as echo-6.
 - **Your chosen theme name was never remembered** - the settings store dropped any name it wasn't
   expecting, so "Midnight Gold" came back as unnamed. Names made of letters, digits, spaces and dashes are
   now kept (still nothing that could carry code into the page).
+- **Asked to check a web address, Echo searched for it instead** - and once mistyped it and mixed in other
+  sites' results ("check your GitHub repo" came back with another project's version numbers). Now when you
+  give an address and ask what's there, Echo reads that exact page first. GitHub repos, folders and files
+  are read through GitHub's public API - what's in it, the newest commits, the README - instead of as a
+  page of menus, and a long page is cut at a line break and marked as cut (cut mid-word, the brain
+  finished the sentence instead of answering).
+- **"Put Stranger Things on the TV" sometimes played a YouTube clip** - when the search engine answered
+  with next to nothing, Echo took that as "not on Netflix". A near-empty answer now proves nothing, and a
+  netflix.com page for the show counts as proof it's there. YouTubers still go to YouTube.
+- **"I couldn't find that on YouTube"** when the search engine came back empty - YouTube's own search is
+  now the last fallback.
 
 ## Tests
 
-All of echo-6's tests pass on echo-7: `tests\sim_world.py` 60/60, `tests\router_coverage.py` 77/77,
+All of echo-6's tests pass on echo-7: `tests\sim_world.py` 61/61 (including a fake GitHub repo whose
+newest version can only be known by reading it), `tests\router_coverage.py` 78/78,
 `tests\agent_projects.py` 4/4, `tests\sandbox_safety.py` 8/8. Seasonal mode was checked in a real
 browser (offer, switching on and off, colors restored, a season you pick yourself surviving a reload, no
 offer outside a season, every season's effect) and its music path against the test world's fake Spotify.

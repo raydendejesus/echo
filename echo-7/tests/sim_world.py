@@ -232,9 +232,36 @@ def _google(request):
     return httpx.Response(200, json={"messages": [], "items": [], "files": [], "resultSizeEstimate": 0})
 
 
+# A public repo only this world has: its newest version ("zephyr-9") can't be guessed, only read.
+SIM_REPO = "/repos/sim-owner/sim-echo"
+
+
+def _github(request):
+    import httpx
+
+    path = request.url.path.rstrip("/")
+    world.log("github", f"{request.method} {path}")
+    if path == SIM_REPO:
+        return httpx.Response(200, json={"full_name": "sim-owner/sim-echo", "description": "A test-world assistant",
+                                         "pushed_at": "2031-05-04T10:00:00Z", "license": {"spdx_id": "MIT"},
+                                         "stargazers_count": 3})
+    if path == SIM_REPO + "/contents":
+        return httpx.Response(200, json=[{"name": n, "type": "dir"} for n in ("v1", "v2", "zephyr-9")]
+                              + [{"name": "README.md", "type": "file"}])
+    if path == SIM_REPO + "/commits":
+        msgs = [("2031-05-04", "Zephyr-9: lanterns"), ("2031-02-01", "v2: faster replies"), ("2030-12-25", "v1: first release")]
+        return httpx.Response(200, json=[{"commit": {"message": m, "committer": {"date": d + "T10:00:00Z"}}} for d, m in msgs])
+    if path == SIM_REPO + "/readme":
+        return httpx.Response(200, text="# Sim Echo\n\n## v1\nThe first release.\n\n## v2\nFaster replies.\n\n"
+                                        "## zephyr-9 - lanterns\nAdds lantern mode: the dashboard glows like a lantern.\n")
+    if path.startswith(SIM_REPO):
+        return httpx.Response(404, json={"message": "Not Found"})
+    return httpx.Response(200, json={"access_token": "sim", "expires_in": 3600, "data": {}})
+
+
 FAKE_HOSTS = {"api.spotify.com": _spotify, "accounts.spotify.com": None, "api.telnyx.com": None,
               "www.googleapis.com": _google, "gmail.googleapis.com": _google, "slides.googleapis.com": _google,
-              "oauth2.googleapis.com": None, "api.github.com": None, "discord.com": None, "api.notion.com": None}
+              "oauth2.googleapis.com": None, "api.github.com": _github, "discord.com": None, "api.notion.com": None}
 
 
 def install_http_fakes():
@@ -478,6 +505,9 @@ SCENARIOS = [
     # core
     S("web search", "who won the 2024 world series?", ["web_search", "check_knowledge"]),
     S("fetch page", "read me what's on https://example.com", ["fetch_webpage"]),
+    # sir gives an address: Echo reads that exact page and reports what's really there
+    S("github repo", "check the GitHub repo at github.com/sim-owner/sim-echo and tell me which version is newest",
+      ["fetch_webpage"], lambda w: w.did("github", "sim-echo/readme") and w.did("reply", "zephyr")),
     S("remember", "remember that my favorite color is forest green", ["remember"],
       lambda w: True),
     S("screen", "what's on my screen right now?", ["view_screen"], lambda w: w.did("vision")),
@@ -594,6 +624,7 @@ async def run_scenario(sc, server, tools, cfg):
     try:
         for line in sc["say"]:
             reply = await server.run_chat_turn(line, cfg)
+            world.log("reply", reply)
             if server._extract_embedded_html(reply):
                 world.log("reply_html", "page in the reply - the dashboard puts it on the canvas")
             replies.append(reply)

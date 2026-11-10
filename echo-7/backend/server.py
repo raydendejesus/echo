@@ -366,6 +366,28 @@ def _fallback_reply(last_tool_text: str) -> str:
     return "Sorry, sir, I didn't quite catch that. Could you say it again?"
 
 
+# Sir names a web address and asks what's there: the brain used to search the web for it
+# instead (once with the address mistyped) and blend in other sites' results. Read the exact
+# address first, so the answer starts from the real page.
+_WEB_ADDRESS = re.compile(
+    r"(?<![@\w.-])((?:https?://)?(?:www\.)?(?:[a-z0-9-]+\.)+"
+    r"(?:com|org|net|io|dev|ai|app|co|edu|gov|me|tv|gg|xyz|info|us|uk|ca|de|so|sh|page)"
+    r"(?:/[^\s,;!?()<>\"']*)?)(?![\w-])", re.I)
+_READ_IT = re.compile(
+    r"\b(check|look(?:ing)?\s+(?:at|into|over|through)|read|summari[sz]e|review|go\s+(?:over|through)|"
+    r"what(?:'s|\s+is|\s+are|s)\s+(?:on|in|at)|tell\s+me\s+(?:about|what)|see\s+what|skim|explore|describe)\b", re.I)
+
+
+def _address_to_read(text: str) -> str | None:
+    if not _READ_IT.search(text):
+        return None
+    m = _WEB_ADDRESS.search(text)
+    if not m:
+        return None
+    url = m.group(1).rstrip(".:")
+    return url if url.lower().startswith(("http://", "https://")) else "https://" + url
+
+
 async def run_chat_turn(user_message: str, cfg: dict) -> str:
     if not await ensure_ollama_running():
         return "My language model isn't responding and I couldn't start it just now, sir."
@@ -402,6 +424,18 @@ async def run_chat_turn(user_message: str, cfg: dict) -> str:
     last_tool_text = ""
     seen_calls: set = set()
     nudged = False
+
+    address = _address_to_read(user_message)
+    if address and any(s["function"]["name"] == "fetch_webpage" for s in schemas):
+        args = {"url": address}
+        activity.log("tool", f"fetch_webpage {json.dumps(args)}  (the address sir gave)")
+        page = await tools.execute_tool("fetch_webpage", args)
+        activity.log("result", page)
+        last_tool_text = str(page)
+        read_msgs = [{"role": "assistant", "content": "", "tool_calls": [{"function": {"name": "fetch_webpage", "arguments": args}}]},
+                     {"role": "tool", "content": page, "name": "fetch_webpage"}]
+        messages += read_msgs
+        conversation_history.extend(read_msgs)
 
     for _ in range(MAX_TOOL_ITERATIONS):
         resp = await http_pool.client().post(

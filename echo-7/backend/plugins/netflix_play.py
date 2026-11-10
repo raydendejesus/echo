@@ -52,7 +52,9 @@ def _remember(query: str, title_id: str, name: str) -> None:
     CACHE_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
-last_lookup: dict = {}  # what the latest search showed: {"query", "searched", "near"}
+last_lookup: dict = {}  # what the latest search showed: {"query", "searched", "near", "mentioned"}
+# The search engine sometimes answers with one or two results, or none: that proves nothing.
+ENOUGH_RESULTS = 5
 
 
 def _search(query: str) -> list[tuple[str, str]]:
@@ -60,16 +62,22 @@ def _search(query: str) -> list[tuple[str, str]]:
     from ddgs import DDGS
 
     found: list[tuple[str, str]] = []
-    last_lookup.update(query=lu.norm(query), searched=False)
+    wanted = lu.norm(query)
+    last_lookup.update(query=wanted, searched=False, mentioned=False)
     for text in (f"{query} Netflix", f"watch {query} netflix"):
         try:
             with DDGS() as ddgs:
                 results = list(ddgs.text(text, max_results=12))
         except Exception:  # noqa: BLE001 - the search engine returns nothing at times
             continue
-        if results:
+        if len(results) >= ENOUGH_RESULTS:
             last_lookup["searched"] = True
         for r in results:
+            # A netflix.com page named for the show (its Tudum news page, say) is evidence enough
+            # that it's a Netflix show, even when no title page made it into the results.
+            # (Whole words only: the search library sometimes glues two results' titles together.)
+            if wanted and "netflix.com/" in r.get("href", "").lower() and re.search(rf"\b{re.escape(wanted)}\b", lu.norm(r.get("title", ""))):
+                last_lookup["mentioned"] = True
             id_match = _TITLE_URL.search(r.get("href", ""))
             name_match = _NETFLIX_PAGE.match(r.get("title", ""))
             if id_match and name_match:
@@ -81,9 +89,9 @@ def _search(query: str) -> list[tuple[str, str]]:
 
 def not_on_netflix(query: str) -> bool:
     """True only when the last lookup for this title really searched and found nothing like it -
-    not when the search engine simply didn't answer."""
+    not when the search engine simply didn't answer, or answered with next to nothing."""
     return (last_lookup.get("query") == lu.norm(query) and last_lookup.get("searched")
-            and not last_lookup.get("near"))
+            and not last_lookup.get("near") and not last_lookup.get("mentioned"))
 
 
 def _find(query: str) -> tuple[str, str] | None:

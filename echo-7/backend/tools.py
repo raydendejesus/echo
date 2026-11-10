@@ -340,7 +340,97 @@ async def web_search(query: str) -> str:
     return UNTRUSTED_PREFIX + "\n".join(lines)
 
 
+# A github.com page read as text is mostly menus, and the README is cut off before its end.
+# GitHub's public API gives what's actually there - no account needed for a public repo.
+_GITHUB_PAGE = re.compile(
+    r"^https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?"
+    r"(?:/(tree|blob)/([^/?#]+)(?:/([^?#]*?))?)?/?(?:[?#].*)?$", re.I)
+GITHUB_PAGE_CHARS = 6000
+_MD_LINK = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+
+
+def _plain_markdown(text: str) -> str:
+    text = _MD_LINK.sub(r"\1", text).replace("**", "").replace("`", "")
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+async def _read_github(url: str) -> str | None:
+    """A GitHub repo, folder or file: what's in it, its newest commits and its README.
+    None when it isn't one (or GitHub won't say) - the page is then read as usual."""
+    m = _GITHUB_PAGE.match(url)
+    if not m:
+        return None
+    owner, repo, kind, ref, path = m.groups()
+    path = (path or "").strip("/")
+    api = f"https://api.github.com/repos/{owner}/{repo}"
+    head = {"Accept": "application/vnd.github+json", "User-Agent": "Echo"}
+    at_ref = {"ref": ref} if ref else {}
+    async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+        if kind == "blob":
+            resp = await client.get(f"https://raw.githubusercontent.com/{owner}/{repo}/{ref}/{path}")
+            if resp.status_code != 200:
+                return None
+            return f"File {path} in the GitHub repo {owner}/{repo}:\n\n{resp.text}"
+        commit_params = {"per_page": 5, **({"sha": ref} if ref else {}), **({"path": path} if path else {})}
+        info, listing, commits, readme = await asyncio.gather(
+            client.get(api, headers=head),
+            client.get(f"{api}/contents/{path}", headers=head, params=at_ref),
+            client.get(f"{api}/commits", headers=head, params=commit_params),
+            client.get(f"{api}/readme/{path}".rstrip("/"), headers={**head, "Accept": "application/vnd.github.raw"}, params=at_ref),
+        )
+    if info.status_code != 200:
+        return None
+    about = info.json()
+    title = f"GitHub repo {about.get('full_name') or owner + '/' + repo}"
+    lines = [title + (f" - {about['description']}" if about.get("description") else "")]
+    facts = []
+    if about.get("pushed_at"):
+        facts.append(f"Last updated {about['pushed_at'][:10]}")
+    license_id = (about.get("license") or {}).get("spdx_id")
+    if license_id and license_id != "NOASSERTION":
+        facts.append(f"license {license_id}")
+    facts.append(f"{about.get('stargazers_count', 0)} stars")
+    lines.append(", ".join(facts) + ".")
+    if path:
+        lines.append(f"This is the folder {path}.")
+    entries = listing.json() if listing.status_code == 200 else None
+    if isinstance(entries, list):
+        entries.sort(key=lambda e: (e.get("type") != "dir", str(e.get("name", "")).lower()))
+        lines.append("Contents: " + ", ".join(str(e.get("name")) + ("/" if e.get("type") == "dir" else "") for e in entries[:60]))
+    recent = commits.json() if commits.status_code == 200 else None
+    if isinstance(recent, list) and recent:
+        lines.append("Newest commits, newest first:")
+        for c in recent:
+            commit = c.get("commit") or {}
+            when = ((commit.get("committer") or {}).get("date") or "")[:10]
+            lines.append(f"- {when}: {(commit.get('message') or '').strip().splitlines()[0] if commit.get('message') else '(no message)'}")
+    text = "\n".join(lines)
+    if readme.status_code == 200 and readme.text.strip():
+        text += "\n\nREADME:\n" + _plain_markdown(readme.text)
+    return text
+
+
+def _clip(text: str, limit: int) -> str:
+    """Cut a long page at a line or sentence break and say so: a page that stops mid-word gets
+    continued by the brain, as if it were writing the rest, instead of answered."""
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    for sep in ("\n", ". ", " "):
+        at = cut.rfind(sep)
+        if at > limit * 0.8:
+            cut = cut[:at + 1]
+            break
+    return cut.rstrip() + "\n[The rest of the page was cut off here.]"
+
+
 async def fetch_webpage(url: str) -> str:
+    url = url.strip()
+    if not url.lower().startswith(("http://", "https://")):
+        url = "https://" + url
+    github = await _read_github(url)
+    if github:
+        return UNTRUSTED_PREFIX + _clip(github, GITHUB_PAGE_CHARS)
     async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
         resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
         resp.raise_for_status()
@@ -350,7 +440,7 @@ async def fetch_webpage(url: str) -> str:
     for tag in soup(["script", "style", "nav", "footer", "header"]):
         tag.decompose()
     text = " ".join(soup.get_text(separator=" ").split())
-    return UNTRUSTED_PREFIX + text[:MAX_PAGE_CHARS]
+    return UNTRUSTED_PREFIX + _clip(text, MAX_PAGE_CHARS)
 
 
 MAX_FACT_CHARS = 300

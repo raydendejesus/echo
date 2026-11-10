@@ -231,6 +231,29 @@ def _youtube_id(query: str) -> tuple[str, str] | None:
             if m:
                 title = re.split(r"\s+-\s+YouTube|\s*\|\s*", r.get("title") or "")[0].strip()
                 return m.group(1), (title or query)[:80]
+    # The search engine sometimes answers all three with nothing: ask YouTube itself.
+    return _search_youtube_videos(query)
+
+
+def _search_youtube_videos(query: str) -> tuple[str, str] | None:
+    """YouTube's own search, filtered to videos: (video id, title) of the top result."""
+    from urllib.parse import quote_plus
+
+    try:
+        page = _youtube_page(f"results?search_query={quote_plus(query)}&sp=EgIQAQ%253D%253D")
+    except Exception:  # noqa: BLE001
+        return None
+    for block in page.split('"videoRenderer":')[1:4]:
+        block = block[:6000]
+        vid = re.search(r'"videoId":"([\w-]{11})"', block)
+        if not vid:
+            continue
+        title = re.search(r'"title":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"', block)
+        try:
+            shown = json.loads(f'"{title.group(1)}"') if title else query
+        except ValueError:
+            shown = query
+        return vid.group(1), shown[:80]
     return None
 
 
