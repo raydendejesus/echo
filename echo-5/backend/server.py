@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import secrets
 import os
 import re
 import tempfile
@@ -106,6 +107,26 @@ async def browser_extension_cors(request, call_next):
     response.headers["Access-Control-Allow-Origin"] = origin
     response.headers["Access-Control-Allow-Private-Network"] = "true"
     return response
+
+
+LOCAL_HOSTS = {"127.0.0.1:8765", "localhost:8765"}
+
+
+@app.middleware("http")
+async def outside_reaches_only_the_phone_line(request, call_next):
+    """The phone tunnel (ngrok) makes this server reachable from the internet so Telnyx can deliver
+    calls - without this, anyone who learned the tunnel's address could read the phone book and
+    settings, or send commands. A request that didn't come straight from this PC (the tunnel
+    forwards with its own Host and an X-Forwarded-For; a DNS-rebinding page has a foreign Host) only
+    reaches the phone endpoints, and only with the private token given to Telnyx."""
+    if request.headers.get("host", "") in LOCAL_HOSTS and "x-forwarded-for" not in request.headers:
+        return await call_next(request)
+    token = (telephony.load_config() or {}).get("webhook_token", "")
+    given = request.query_params.get("k", "")
+    if request.url.path.startswith("/api/telephony/") and token and secrets.compare_digest(given, token):
+        return await call_next(request)
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
 
 @app.middleware("http")

@@ -1,4 +1,5 @@
 import json
+import secrets
 import uuid
 import xml.sax.saxutils as xml_sax
 from collections import OrderedDict
@@ -46,6 +47,22 @@ def save_config(cfg: dict) -> None:
     CONFIG_FILE.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
 
 
+def webhook_token(cfg: dict) -> str:
+    """A private random token that every address given to Telnyx carries. The tunnel that lets
+    Telnyx reach this PC is public, so the server only answers a request that came through it when
+    the request carries this token - which only Telnyx is ever handed (over HTTPS)."""
+    token = cfg.get("webhook_token")
+    if not token:
+        token = cfg["webhook_token"] = secrets.token_urlsafe(24)
+        save_config(cfg)
+    return token
+
+
+def hook_url(cfg: dict, path: str, query: str = "") -> str:
+    """A webhook address for Telnyx: the tunnel, the path, any query, and the token."""
+    return f"{cfg['public_base_url']}{path}?{query + '&' if query else ''}k={webhook_token(cfg)}"
+
+
 def register_audio_clip(audio_bytes: bytes) -> str:
     clip_id = uuid.uuid4().hex
     audio_clips[clip_id] = audio_bytes
@@ -68,8 +85,8 @@ def gather_texml(cfg: dict, audio_clip_id: str) -> str:
     talking), which was causing Jarvis to cut people off mid-sentence, or even
     pick up its own voice bleed and interrupt itself. This way it fully finishes
     speaking before it starts listening."""
-    audio_url = f"{cfg['public_base_url']}/api/telephony/audio/{audio_clip_id}"
-    action_url = f"{cfg['public_base_url']}/api/telephony/gather"
+    audio_url = hook_url(cfg, f"/api/telephony/audio/{audio_clip_id}")
+    action_url = hook_url(cfg, "/api/telephony/gather")
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Play>{_escape(audio_url)}</Play>
@@ -79,7 +96,7 @@ def gather_texml(cfg: dict, audio_clip_id: str) -> str:
 
 
 def say_and_hangup_texml(cfg: dict, audio_clip_id: str) -> str:
-    audio_url = f"{cfg['public_base_url']}/api/telephony/audio/{audio_clip_id}"
+    audio_url = hook_url(cfg, f"/api/telephony/audio/{audio_clip_id}")
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Play>{_escape(audio_url)}</Play>
@@ -127,8 +144,8 @@ async def place_outbound_call(cfg: dict, to_number: str, contact_name: str, open
                 "To": to_number,
                 "From": cfg["telnyx_number"],
                 "ApplicationSid": cfg["application_sid"],
-                "Url": f"{cfg['public_base_url']}/api/telephony/outbound_voice?{query}",
-                "StatusCallback": f"{cfg['public_base_url']}/api/telephony/status?{query}",
+                "Url": hook_url(cfg, "/api/telephony/outbound_voice", query),
+                "StatusCallback": hook_url(cfg, "/api/telephony/status", query),
                 "StatusCallbackEvent": "initiated ringing answered completed",
                 "MachineDetection": "Enable",
             },
@@ -179,7 +196,7 @@ async def notify_owner(cfg: dict, message: str) -> None:
                 "To": owner_number,
                 "From": cfg["telnyx_number"],
                 "ApplicationSid": cfg["application_sid"],
-                "Url": f"{cfg['public_base_url']}/api/telephony/notify_voice?{query}",
+                "Url": hook_url(cfg, "/api/telephony/notify_voice", query),
             },
         )
         resp.raise_for_status()

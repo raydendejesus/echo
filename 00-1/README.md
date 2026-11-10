@@ -211,4 +211,4 @@ Voice: change `VOICE` in `backend/server.py` (default `en-GB-RyanNeural`). Run `
 
 ## License
 
-No license file is included by default - add one (MIT is a common permissive choice) if you want to make clear what others can do with this code.
+Every version in this repo is released under the **MIT License** - see [`LICENSE`](../LICENSE). Use it, change it, share it or sell it; just keep the copyright notice crediting Rayden DeJesus.

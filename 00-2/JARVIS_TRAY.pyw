@@ -20,7 +20,7 @@ import telephony  # noqa: E402
 
 SERVER_URL = "http://127.0.0.1:8765"
 PYTHON_EXE = PROJECT_DIR / "venv" / "Scripts" / "python.exe"
-NGROK_EXE = Path(r"C:\Users\Rayden\AppData\Local\ngrok-bin\ngrok.exe")
+NGROK_EXE = Path.home() / "AppData" / "Local" / "ngrok-bin" / "ngrok.exe"
 NGROK_API = "http://127.0.0.1:4040/api/tunnels"
 
 server_process = None
@@ -61,17 +61,21 @@ def get_ngrok_url() -> str | None:
     return None
 
 
-def update_telnyx_voice_url(cfg: dict, new_url: str) -> None:
+def update_telnyx_voice_url(cfg: dict) -> bool:
+    """Point the Telnyx application at this tunnel, with the private webhook token (never logged)."""
     try:
-        httpx.patch(
+        resp = httpx.patch(
             f"https://api.telnyx.com/v2/texml_applications/{cfg['application_sid']}",
             headers={"Authorization": f"Bearer {cfg['api_key']}"},
-            json={"voice_url": f"{new_url}/api/telephony/voice"},
+            json={"voice_url": telephony.hook_url(cfg, "/api/telephony/voice")},
             timeout=20,
         )
-        print(f"[tray] updated Telnyx voice_url to {new_url}/api/telephony/voice")
+        resp.raise_for_status()
+        print(f"[tray] updated Telnyx voice_url to {cfg['public_base_url']}/api/telephony/voice (with token)")
+        return True
     except Exception as exc:
         print(f"[tray] failed to update Telnyx voice_url: {exc}")
+        return False
 
 
 def start_ngrok_if_needed() -> None:
@@ -101,11 +105,17 @@ def start_ngrok_if_needed() -> None:
 
     url = get_ngrok_url()
     cfg = telephony.load_config()
-    if url and cfg and cfg.get("public_base_url") != url:
+    if not (url and cfg):
+        return
+    telephony.webhook_token(cfg)  # made once, kept in the private telephony_config.json
+    registered = f"{url}|{cfg['webhook_token']}"
+    if cfg.get("public_base_url") != url or cfg.get("registered_hook") != registered:
         print(f"[tray] ngrok URL is now {url}, syncing config and Telnyx")
         cfg["public_base_url"] = url
         telephony.save_config(cfg)
-        update_telnyx_voice_url(cfg, url)
+        if update_telnyx_voice_url(cfg):
+            cfg["registered_hook"] = registered
+            telephony.save_config(cfg)
 
 
 def make_icon_image() -> Image.Image:

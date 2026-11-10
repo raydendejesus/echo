@@ -270,4 +270,4 @@ Voice: change `VOICE` in `backend/server.py` (default `en-GB-RyanNeural`). Run `
 
 ## License
 
-This project is released under a custom, plain-language **non-commercial** license - see [`LICENSE.md`](LICENSE.md) for the full text. In short: free to use, modify, and share forever; it may never be sold by anyone; and if it's used as the foundation of another project, or makes up 51% or more of one, that project is bound by the same no-selling rule too.
+Every version in this repo is released under the **MIT License** - see [`LICENSE`](../LICENSE). Use it, change it, share it or sell it; just keep the copyright notice crediting Rayden DeJesus. (This version was first published under a custom non-commercial license; that has been replaced.)

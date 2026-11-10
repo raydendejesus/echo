@@ -2,7 +2,7 @@
 
 A local, self-hosted AI assistant - a real LLM as the brain (running on your own GPU via Ollama), a natural voice, wake-word listening, memory, and increasingly, real-world capability, all without a cloud AI subscription.
 
-This repo holds five successive versions of the project side by side, each in its own folder, so the progression is visible rather than hidden behind force-pushed history. Each version is a complete, independently-runnable copy with its own README - pick the one you actually want to run (almost certainly the newest), or read through all five to see how it evolved.
+This repo holds every version of the project side by side, each in its own folder, so the progression is visible rather than hidden behind force-pushed history. Each version is a complete, independently-runnable copy with its own README - pick the one you actually want to run (almost certainly the newest), or read through them all to see how it evolved.
 
 ## [`00-1/`](00-1/) - the original
 
@@ -24,10 +24,22 @@ The project is renamed from **Jarvis** to **Echo** - this is the Echo-4 edition 
 
 The clean-up release. It was meant to run smoother, faster and better - and to be less bloated than every version before it - while keeping all of their abilities and the new ones. Same model, same toggles, same behavior as echo-4, but the server loads in about 57 MB instead of 76 MB and uses about 24% less memory running, loads and replies faster, and no reply can hold everyone else up. Its README has the measured comparison with every earlier version.
 
+## [`echo-6/`](echo-6/) - Echo-6, the big update
+
+Hears far better (even through a cheap mic), builds apps and runs code on its own in a sandbox - only with your approval - controls the PC, the TV and Netflix, screens unknown callers, reports on the PC's health and its own, and has a brand-new dashboard: a living 3D orb with a moon for every switch you turn on, Mission Control, a Live panel, a camera view, night mode and colors you choose (the old look is one click away). One-click `SETUP.bat`.
+
+## Security fix for every version
+
+If you run any version with phone calling: the public ngrok tunnel used for calls used to forward
+*everything* to the assistant's server, so someone who learned the tunnel's address could read the phone
+book and settings or send it commands. Every folder in this repo is now fixed - through the tunnel only the
+phone-call endpoints answer, and (from 00-2 on) only with a private token the tray registers with Telnyx
+automatically. Update to the current files. Details in [`echo-6/README.md`](echo-6/README.md).
+
 ## Which one should I run?
 
-`echo-4`, unless you have a specific reason to want an earlier version's exact behavior. Each version's own README has full setup instructions - go to [`echo-4/README.md`](echo-4/README.md) and start there.
+`echo-6`, unless you have a specific reason to want an earlier version's exact behavior. Each version's own README has full setup instructions - go to [`echo-6/README.md`](echo-6/README.md) and start there.
 
 ## License
 
-All five versions share the same license - see [`00-3/LICENSE.md`](00-3/LICENSE.md) (00-1 uses no formal license file; treat 00-2 and 00-3's terms as the project's intent throughout). In short: free to use, modify, and share forever; it may never be sold by anyone; and if it's used as the foundation of another project, or makes up 51% or more of one, that project is bound by the same no-selling rule too.
+**MIT** - see [`LICENSE`](LICENSE). It covers every version in this repo. You can use, change, share and even sell this code; the one condition is that you keep the copyright notice - the credit to **Rayden DeJesus** - in every copy or substantial part of it. If you build something on Echo, a link back to [github.com/raydendejesus/jarvis](https://github.com/raydendejesus/jarvis) is appreciated.
