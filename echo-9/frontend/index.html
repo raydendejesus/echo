@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Echo</title>
+<script>
+  // Prefer the Classic look? Go there before anything draws.
+  try { if (localStorage.getItem("echo_layout") === "classic") location.replace("classic.html"); } catch (err) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;500&family=IBM+Plex+Mono:wght@400;500&family=Orbitron:wght@500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="ui.css" />
+</head>
+<body class="orb-ui">
+  <div id="orbStage"></div>
+  <div class="ui-grid"></div>
+
+  <header class="ui-top">
+    <span class="ui-brand">ECHO</span>
+    <span class="clock" id="clock">--:--:--</span>
+  </header>
+
+  <!-- what Echo heard and said; the old dashboard's status/log lines live on here -->
+  <div class="ui-caption" aria-live="polite">
+    <div class="ui-state" id="orbStateLabel">Listening</div>
+    <div class="ui-words" id="captionWords">Good to see you, sir.</div>
+    <div id="status" hidden>Initializing...</div>
+    <div id="log" hidden></div>
+  </div>
+
+  <!-- the two custom arrows -->
+  <button class="ui-arrow left" id="navLeft" type="button" aria-label="Open Mission Control">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <circle class="a-ring" cx="32" cy="32" r="29"></circle>
+      <circle class="a-ring2" cx="32" cy="32" r="24"></circle>
+      <path class="a-blade back" d="M22 20 L34 32 L22 44 L25 44 L37 32 L25 20 Z"></path>
+      <path class="a-blade" d="M29 18 L43 32 L29 46 L33 46 L47 32 L33 18 Z"></path>
+      <circle class="a-spark" cx="47" cy="32" r="1.8"></circle>
+    </svg>
+    <span class="a-tip" id="navLeftTip">Mission</span>
+  </button>
+  <button class="ui-arrow right flip" id="navRight" type="button" aria-label="Show what's happening now">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <circle class="a-ring" cx="32" cy="32" r="29"></circle>
+      <circle class="a-ring2" cx="32" cy="32" r="24"></circle>
+      <path class="a-blade back" d="M22 20 L34 32 L22 44 L25 44 L37 32 L25 20 Z"></path>
+      <path class="a-blade" d="M29 18 L43 32 L29 46 L33 46 L47 32 L33 18 Z"></path>
+      <circle class="a-spark" cx="47" cy="32" r="1.8"></circle>
+    </svg>
+    <span class="a-tip" id="navRightTip">Live</span>
+  </button>
+
+  <!-- quick talk box: click the orb -->
+  <form class="ui-talk" id="talkForm" hidden>
+    <input type="text" id="talkInput" placeholder="Type to Echo..." autocomplete="off" />
+    <button type="submit" class="ui-btn primary">Send</button>
+  </form>
+
+  <!-- ===================== LEFT: Mission Control ===================== -->
+  <section class="ui-panel mission" id="mission" aria-label="Mission Control">
+    <div id="missionMenu">
+      <h2 class="ui-h">Mission Control</h2>
+      <p class="ui-sub">Pick what you want to see.</p>
+      <div class="ui-tiles" id="missionTiles"></div>
+    </div>
+
+    <div class="ui-section" data-section="talk" hidden>
+      <h2 class="ui-h">Talk</h2>
+      <p class="ui-sub">Type to Echo, or send it a photo or video to look at.</p>
+      <div data-tab="Talk">
+        <form class="ui-talk inline" id="talkForm2">
+          <input type="text" id="talkInput2" placeholder="Type to Echo..." autocomplete="off" />
+          <button type="submit" class="ui-btn primary">Send</button>
+        </form>
+        <div class="ui-card">
+          <h3 class="ui-h3">Conversation</h3>
+          <ol class="ui-convo" id="convoList"></ol>
+        </div>
+      </div>
+      <div class="ui-card ui-row-wrap" data-tab="Photo &amp; face">
+        <label class="ui-btn">Attach photo / video<input type="file" id="fileInput" accept="image/*,video/*" hidden /></label>
+        <button id="enrollBtn" class="ui-btn" type="button">Enroll my face (Desk Guard)</button>
+        <span id="enrollResult" class="hint-text"></span>
+      </div>
+    </div>
+
+    <div class="ui-section" data-section="phone" hidden>
+      <h2 class="ui-h">Phone Book <span id="pbCount" class="side-count"></span></h2>
+      <div class="ui-card" id="phoneBookPanel" data-tab="Contacts">
+        <form id="phoneBookForm" class="phonebook-form">
+          <label class="field-line"><span class="field-label">name:</span><input type="text" id="pbName" required /></label>
+          <label class="field-line"><span class="field-label">number:</span><input type="tel" id="pbNumber" placeholder="+1 555 123 4567" required /></label>
+          <button type="submit" class="hud-btn">Add</button>
+        </form>
+        <ul id="phoneBookList" class="phonebook-list"></ul>
+      </div>
+      <div data-tab="Turned-away calls">
+        <details class="blocked-calls ui-card" id="blockedCalls" open hidden>
+          <summary>Turned-away calls <span id="blockedCount"></span></summary>
+          <ul id="blockedCallsList" class="blocked-list"></ul>
+        </details>
+        <p class="ui-empty ui-when-empty">No calls have been turned away.</p>
+      </div>
+      <p class="hint-text" data-tab-always>
+        <strong>can call Echo</strong> lets a contact phone Echo. The gold <strong>sir</strong> switch means that number is you:
+        you get full control of the PC by phone. A number that isn't saved here is asked who they are, then saved with
+        calling off - in red, marked <strong>SCAM</strong>, if it sounded like one.
+      </p>
+    </div>
+
+    <div class="ui-section" data-section="places" hidden>
+      <h2 class="ui-h">Address Book <span id="abCount" class="side-count"></span></h2>
+      <div class="ui-card" id="addressBook">
+        <form id="addressForm" class="phonebook-form">
+          <label class="field-line"><span class="field-label">name:</span><input type="text" id="abName" placeholder="home, gym, favorite restaurant" required /></label>
+          <label class="field-line"><span class="field-label">address:</span><input type="text" id="abAddress" required /></label>
+          <button type="submit" class="hud-btn">Save place</button>
+        </form>
+        <ul id="addressList" class="phonebook-list address-list"></ul>
+      </div>
+    </div>
+
+    <div class="ui-section" data-section="github" hidden>
+      <h2 class="ui-h">GitHub <span id="ghCount" class="side-count"></span></h2>
+      <p class="ui-sub">Save repos under your own names, then just say "check the echo GitHub" to have Echo read one, or "go to the echo GitHub" to open it.</p>
+      <div class="ui-card">
+        <form id="githubForm" class="phonebook-form">
+          <label class="field-line"><span class="field-label">name:</span><input type="text" id="ghName" placeholder="echo, idk, my game" maxlength="60" required /></label>
+          <label class="field-line"><span class="field-label">link:</span><input type="text" id="ghUrl" placeholder="github.com/you/your-repo" required /></label>
+          <button type="submit" class="hud-btn">Save repo</button>
+        </form>
+        <p id="ghError" class="hint-text error" hidden></p>
+        <ul id="githubList" class="phonebook-list address-list"></ul>
+      </div>
+    </div>
+
+    <div class="ui-section" data-section="calendar" hidden>
+      <h2 class="ui-h">Calendar <span id="calCount" class="side-count"></span></h2>
+      <p class="ui-sub">Your events - name, day, time, place and what it's about. Or just tell Echo: "put the dentist on Friday at 3 at Main Street Dental", "what's on my calendar this week?" Events with a reminder are said out loud before they start.</p>
+      <div class="cal-layout">
+        <div class="ui-card cal-month">
+          <div class="cal-head">
+            <button type="button" class="ui-chip" id="calPrev" aria-label="Previous month">&lsaquo;</button>
+            <strong id="calMonthTitle"></strong>
+            <button type="button" class="ui-chip" id="calNext" aria-label="Next month">&rsaquo;</button>
+            <button type="button" class="ui-chip" id="calToday">Today</button>
+          </div>
+          <div class="cal-grid cal-weekdays"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          <div class="cal-grid" id="calGrid"></div>
+          <h3 class="brain-h">Coming up</h3>
+          <ul id="calUpcoming" class="phonebook-list cal-list"></ul>
+        </div>
+        <div class="ui-card cal-side">
+          <h3 class="brain-h" id="calDayTitle"></h3>
+          <ul id="calDayList" class="phonebook-list cal-list cal-day-list"></ul>
+          <h3 class="brain-h" id="calFormTitle">Add an event</h3>
+          <form id="calForm" class="phonebook-form cal-form">
+            <label class="field-line"><span class="field-label">name:</span><input type="text" id="calName" maxlength="120" placeholder="Dentist" required /></label>
+            <label class="field-line"><span class="field-label">day:</span><input type="date" id="calDate" required /></label>
+            <div class="cal-times">
+              <label class="field-line"><span class="field-label">from:</span><input type="time" id="calTime" /></label>
+              <label class="field-line"><span class="field-label">until:</span><input type="time" id="calEnd" /></label>
+            </div>
+            <label class="field-line"><span class="field-label">where:</span><input type="text" id="calLoc" maxlength="200" placeholder="Main Street Dental" /></label>
+            <label class="field-line"><span class="field-label">about:</span><textarea id="calDetails" rows="2" maxlength="2000" placeholder="Cleaning - bring the insurance card"></textarea></label>
+            <label class="field-line"><span class="field-label">remind:</span>
+              <select id="calRemind">
+                <option value="">no reminder</option>
+                <option value="0">when it starts</option>
+                <option value="10">10 minutes before</option>
+                <option value="30" selected>30 minutes before</option>
+                <option value="60">1 hour before</option>
+                <option value="1440">1 day before</option>
+              </select>
+            </label>
+            <div class="cal-actions">
+              <button type="submit" class="hud-btn" id="calSave">Add event</button>
+              <button type="button" class="ui-chip" id="calCancel" hidden>Cancel</button>
+            </div>
+          </form>
+          <p id="calError" class="hint-text error" hidden></p>
+        </div>
+      </div>
+    </div>
+    <div id="calToast" class="cal-toast" role="status" hidden>
+      <span id="calToastText"></span>
+      <button type="button" class="ui-chip" id="calToastClose">OK</button>
+    </div>
+
+    <div class="ui-section" data-section="switches" hidden>
+      <h2 class="ui-h">Switches</h2>
+      <p class="ui-sub">Everything Echo can do, by category. Each switch says what it does and what it costs.</p>
+      <div class="ui-filterbar">
+        <input type="search" id="switchFilter" placeholder="Search switches..." autocomplete="off" />
+        <div class="ui-chips" id="switchChips">
+          <button type="button" class="ui-chip active" data-show="all">All</button>
+          <button type="button" class="ui-chip" data-show="on">On</button>
+          <button type="button" class="ui-chip" data-show="off">Off</button>
+        </div>
+      </div>
+      <div id="switchList"></div>
+      <p id="ollamaStatus" class="hint-text"></p>
+      <p id="settingsError" class="hint-text error"></p>
+      <p id="pluginsError" class="hint-text error"></p>
+    </div>
+
+    <div class="ui-section" data-section="projects" hidden>
+      <h2 class="ui-h">Projects</h2>
+      <div id="tab-projects">
+        <div class="ui-card" data-tab="Projects"><ul id="projectsList" class="projects-list"></ul></div>
+        <div data-tab="Waiting for you">
+          <div id="approvalsBox" class="approvals-box ui-card" hidden>
+            <h3 class="ui-h3">Waiting for your OK</h3>
+            <ul id="approvalsList" class="approvals-list"></ul>
+          </div>
+          <p class="ui-empty ui-when-empty">Nothing is waiting for your OK.</p>
+        </div>
+        <p class="hint-text">
+          Ask "Echo, make me an app that..." or "research the best..." and Echo works on it in the background,
+          checks its own work in a sandbox, and tells you when it's done. Asking is your approval for 24 hours;
+          anything Echo wants to do on its own shows up above for you to approve. Approving by phone needs your passcode.
+        </p>
+      </div>
+      <span id="approvalBadge" hidden></span>
+    </div>
+
+    <div class="ui-section" data-section="thinking" hidden>
+      <h2 class="ui-h">Thinking</h2>
+      <p class="ui-sub">What Echo heard, the tools it used, what they returned, and what it said.</p>
+      <div class="ui-card" id="thoughtPanel">
+        <div class="mic-line" id="micLine">
+          <span id="micName" class="mic-name">mic: checking...</span>
+          <span class="mic-meter"><span id="micLevel" class="mic-level"></span><span class="mic-mark"></span></span>
+        </div>
+        <ol class="thought-log" id="thoughtLog"></ol>
+      </div>
+    </div>
+
+    <div class="ui-section" data-section="camera" hidden>
+      <h2 class="ui-h">Camera</h2>
+      <p class="ui-sub">What Echo's camera sees, and what it makes of it.</p>
+      <div class="ui-card" id="camOff" hidden>
+        <p class="hint-text">Camera access is switched off, so Echo can't look. Turn on <strong>See the camera</strong> in Switches.</p>
+        <button type="button" class="ui-btn" id="camGoSwitches">Open Switches</button>
+      </div>
+      <div id="camOn" hidden>
+      <div class="ui-camwrap" data-tab="Look">
+        <div class="ui-cam" id="camView">
+          <img id="camImg" alt="What the camera sees" hidden />
+          <div id="camBoxes"></div>
+          <p class="ui-empty" id="camEmpty">Press <strong>Look now</strong> to see what Echo sees.</p>
+        </div>
+        <div class="ui-camside">
+          <div class="ui-row-wrap">
+            <button type="button" class="ui-btn primary" id="camLook">Look now</button>
+            <label class="ui-check"><input type="checkbox" id="camLabels" checked /> Label everything</label>
+            <label class="ui-check"><input type="checkbox" id="camAuto" /> Keep looking</label>
+          </div>
+          <p class="ui-camdesc" id="camDesc"></p>
+          <ul class="ui-camlist" id="camList"></ul>
+        </div>
+      </div>
+          <div class="ui-card" data-tab="Remember me">
+            <h3 class="ui-h3">Remember me</h3>
+            <p class="hint-text" id="camKnown">Echo learns your face from reference photos.</p>
+            <div class="ui-row-wrap">
+              <button type="button" class="ui-btn" id="camRemember">Remember me now</button>
+              <span class="hint-text" id="camRememberMsg"></span>
+            </div>
+            <div class="ui-refs" id="camRefs"></div>
+          </div>
+      </div>
+    </div>
+
+    <div class="ui-section viewer" data-section="canvas" hidden>
+      <h2 class="ui-h">Canvas <span id="canvasTitle" class="side-count"></span></h2>
+      <div class="ui-viewer" id="canvasPanel" hidden>
+        <iframe id="canvasFrame" sandbox="allow-scripts" title="Echo canvas preview"></iframe>
+      </div>
+      <p class="ui-empty" id="canvasEmpty">Nothing on the canvas yet. Ask Echo to make an animation, a page or a quick demo.</p>
+    </div>
+
+    <div class="ui-section viewer" data-section="model3d" hidden>
+      <h2 class="ui-h">3D Models <span id="model3dTitle" class="side-count"></span></h2>
+      <div data-tab="Viewer">
+        <div class="ui-viewer dark" id="model3dPanel">
+          <canvas id="model3dCanvas"></canvas>
+        </div>
+        <p class="hint-text">Drag to spin it, scroll to zoom.</p>
+      </div>
+      <div class="ui-card" data-tab="All models"><div class="ui-strip" id="modelStrip"></div></div>
+    </div>
+
+    <div class="ui-section" data-section="photos" hidden>
+      <h2 class="ui-h">Photos</h2>
+      <p class="ui-sub">Pictures Echo has made. Click one to see it big.</p>
+      <div class="ui-gallery" id="photoGallery"></div>
+    </div>
+
+    <div class="ui-section" data-section="connections" hidden>
+      <h2 class="ui-h">Connections</h2>
+      <div class="ui-card" id="tab-connections">
+        <div id="connectionsList"></div>
+        <p class="hint-text" id="connectionsStatusMsg"></p>
+      </div>
+    </div>
+
+    <div class="ui-section" data-section="hearing" hidden>
+      <h2 class="ui-h">Hearing</h2>
+      <div class="ui-card" id="tab-audio" data-tab="Words Echo knows">
+        <h3 class="ui-h3">Words Echo should know</h3>
+        <p class="hint-text">Names Echo keeps mishearing - a YouTuber, a friend, a game. It also learns names from your phone book, address book and what you ask it to play.</p>
+        <form id="wordForm" class="phrase-row">
+          <input type="text" id="wordInput" placeholder="e.g. The Burnt Peanut" autocomplete="off" />
+          <button type="submit" class="hud-btn">Add</button>
+        </form>
+        <ul id="wordList" class="word-list"></ul>
+        <p class="hint-text" id="learnedWords"></p>
+      </div>
+      <div class="ui-card" data-tab="Devices">
+        <h3 class="ui-h3">This browser's devices</h3>
+        <p class="hint-text" id="audioStatusMsg"></p>
+        <label class="field-row"><span>Microphone</span><select id="micSelect"></select></label>
+        <div class="level-meter"><div id="levelBar" class="level-fill"></div></div>
+        <label class="field-row"><span>Speaker output</span><select id="speakerSelect"></select></label>
+        <p class="hint-text">This only previews devices through the browser. Echo's always-on listener follows whatever Windows has as the default microphone.</p>
+      </div>
+    </div>
+
+    <div class="ui-section" data-section="setup" hidden>
+      <h2 class="ui-h">Setup <span id="setupBadge" class="tab-badge" hidden></span></h2>
+      <p class="ui-sub">Everything Echo needs, checked live. "Fix it" only downloads official files or rebuilds Echo's own model.</p>
+      <div class="ui-card"><ul id="setupList" class="setup-list"></ul></div>
+      <div class="ui-card" id="brainCard">
+        <h3 class="brain-h">Brain memory (context window)</h3>
+        <p class="hint-text">How much Echo can keep in view while it answers: its rules, your saved facts, the conversation so far and any page it's reading. Bigger holds longer chats and longer pages - same speed, more graphics memory. Your saved memories are kept at every size.</p>
+        <div class="ui-chips brain-sizes" id="brainSizes"></div>
+        <label class="ui-check"><input type="checkbox" id="brainCompact" /> Compact memory (8-bit, on by default) - about half the context's graphics memory, about 4% slower replies, answers unchanged in testing. Applies to every model in Ollama and restarts it.</label>
+        <label class="ui-check"><input type="checkbox" id="engineOn" /> TurboQuant engine (experimental) - Echo's brain runs in a llama.cpp build with Google's TurboQuant: its context at about a third of its full size, instead of half. The vision model and Echo Mini stay on Ollama.</label>
+        <button type="button" class="ui-chip" id="engineInstall" hidden>Download the engine (about 840 MB)</button>
+        <p class="hint-text" id="brainNote"></p>
+      </div>
+      <div class="ui-card" id="soundCard">
+        <h3 class="brain-h">Sound outputs</h3>
+        <div class="sound-row">
+          <div class="sound-label"><strong>Echo's voice</strong><small>Always on - where Echo talks to you, like before.</small></div>
+          <select id="voiceOut" aria-label="Output for Echo's voice"></select>
+          <button type="button" class="ui-chip" data-test="voiceOut">Test</button>
+        </div>
+        <div class="sound-row">
+          <div class="sound-label"><strong>Speaker</strong><small>White noise and wake-up alarms play here instead.</small></div>
+          <label class="sw-toggle" title="Use a speaker"><input type="checkbox" id="speakerOn" aria-label="Use a speaker" /><span></span></label>
+          <select id="speakerOut" aria-label="Speaker output"></select>
+          <button type="button" class="ui-chip" data-test="speakerOut">Test</button>
+        </div>
+        <p class="hint-text" id="soundNote"></p>
+        <div class="sound-alarms">
+          <h3 class="brain-h">Alarms <button type="button" class="ui-chip" id="soundStop" hidden>Stop</button></h3>
+          <form id="alarmForm" class="sound-alarm-form">
+            <input type="time" id="alarmTime" required aria-label="Alarm time" />
+            <select id="alarmRepeat" aria-label="Repeat"><option value="">once</option><option value="daily">every day</option><option value="weekdays">weekdays</option></select>
+            <input type="text" id="alarmLabel" maxlength="80" placeholder="what for (optional)" aria-label="What the alarm is for" />
+            <button type="submit" class="ui-chip">Add alarm</button>
+          </form>
+          <ul id="alarmList" class="phonebook-list cal-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="ui-section" data-section="appearance" hidden>
+      <h2 class="ui-h">Appearance</h2>
+      <p class="ui-sub">Make Echo yours. Changes show instantly and are saved.</p>
+      <div id="appearanceBox"></div>
+    </div>
+
+    <div class="ui-section" data-section="help" hidden>
+      <h2 class="ui-h">Help</h2>
+      <div class="ui-card ui-help">
+        <p><strong>The orb</strong> - each small orb on the rings is a feature you have switched on, in its own color. Click the big orb to type to Echo. When you say "night Echo" (or switch Echo off) it goes to sleep and dims.</p>
+        <p><strong>Left arrow</strong> - Mission Control. Pick a section; the same arrow takes you back.</p>
+        <p><strong>Right arrow</strong> - Live: what's playing, your last request, the phone line, projects, the mic and the PC.</p>
+        <p><strong>Sir Page</strong> - Echo phones <em>you</em> when something happens: a caller turned away, a contact on a call, or Desk Guard locking the PC.</p>
+        <p><strong>Two replies at once</strong> - Echo can answer you while a call is going, for about 1 GB more graphics memory.</p>
+        <p><strong>Location</strong> - Off, PC or Phone: only the device you pick shares its position.</p>
+        <p><strong>Browser control</strong> - Echo clicks and types in your browser tab with its own cursor, never your real mouse.</p>
+        <p><strong>Prefer the old look?</strong> Appearance - Interface - Classic.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RIGHT: Live ===================== -->
+  <section class="ui-panel live" id="livePanel" aria-label="Live">
+    <h2 class="ui-h">Live</h2>
+    <p class="ui-sub" id="liveUpdated">What's happening right now.</p>
+    <div class="ui-live" id="liveCards"></div>
+  </section>
+
+  <!-- full-screen photo -->
+  <div class="ui-lightbox" id="lightbox" hidden>
+    <img id="lightboxImg" alt="" />
+    <p id="lightboxCaption"></p>
+    <button type="button" class="ui-btn" id="lightboxClose">Close</button>
+  </div>
+
+  <!-- project viewer (unchanged from before) -->
+  <div id="projectModal" class="project-modal" hidden>
+    <div class="project-modal-box">
+      <div class="project-modal-head">
+        <span id="projectModalTitle" class="side-heading"></span>
+        <span id="projectModalStatus" class="side-count"></span>
+        <button type="button" id="projectAppBtn" class="hud-btn">App</button>
+        <button type="button" id="projectCodeBtn" class="hud-btn">Code</button>
+        <button type="button" id="projectStopBtn" class="hud-btn">Stop</button>
+        <button type="button" id="projectCloseBtn" class="hud-btn">Close</button>
+      </div>
+      <div class="project-modal-body">
+        <iframe id="projectFrame" title="Echo's project" sandbox="allow-scripts allow-modals allow-pointer-lock"></iframe>
+        <div class="project-code" id="projectCode" hidden>
+          <div class="project-code-files" id="projectCodeFiles"></div>
+          <pre class="project-code-text"><code id="projectCodeText"></code></pre>
+        </div>
+        <div class="project-modal-side">
+          <h3 class="tab-subheading">What Echo did</h3>
+          <ol id="projectLog" class="thought-log project-log"></ol>
+          <p id="projectFiles" class="hint-text"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="model3d-viewer.js"></script>
+  <script src="app.js" defer></script>
+  <script type="module" src="orb-ui.js"></script>
+</body>
+</html>

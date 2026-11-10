@@ -47,6 +47,14 @@ reminders); **sound outputs** - Echo's voice on your headphones and a speaker fo
 wake-up alarms; 3D generation no longer squeezes Echo's brain; browser control of the whole browser; and
 a GitHub page - "check the echo GitHub", "go to the echo GitHub".
 
+## [`echo-9/`](echo-9/) - Echo-9: Echo Turbo
+
+**An experimental TurboQuant engine, off by default**: Echo's own brain can run in a llama.cpp build with
+Google's TurboQuant, which stores its context memory at about a third of its full size instead of half
+(the vision model and Echo Mini stay on Ollama, and Echo falls back to Ollama by itself if the engine
+isn't answering). Also: sites by name - "open GitHub", "go to Excalidraw" - and "open a new tab";
+Echo never navigates its own dashboard away; and "open YouTube" no longer sometimes asks which app.
+
 ## Security fix for every version
 
 If you run any version with phone calling: the public ngrok tunnel used for calls used to forward
@@ -57,7 +65,7 @@ automatically. Update to the current files. Details in [`echo-6/README.md`](echo
 
 ## Which one should I run?
 
-`echo-8`, unless you have a specific reason to want an earlier version's exact behavior. Start with [`echo-8/README.md`](echo-8/README.md); the full guide to what Echo can do is [`echo-6/README.md`](echo-6/README.md).
+`echo-9`, unless you have a specific reason to want an earlier version's exact behavior. Start with [`echo-9/README.md`](echo-9/README.md); the full guide to what Echo can do is [`echo-6/README.md`](echo-6/README.md).
 
 ## License
 

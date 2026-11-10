@@ -1,0 +1,50 @@
+# Python virtual environment (made by SETUP.bat) and downloaded helper programs
+venv/
+tools/
+__pycache__/
+*.pyc
+
+# Runtime logs and test output
+*.log
+tests/sim_world_report.json
+tests/sim_out.txt
+
+# Settings, accounts and secrets - never commit these
+backend/config.json
+backend/telephony_config.json
+backend/google_oauth_config.json
+backend/github_oauth_config.json
+backend/spotify_oauth_config.json
+backend/discord_config.json
+backend/notion_config.json
+backend/connections/
+backend/passcode.json
+backend/pc_power.json
+echo_switch_key.txt
+echo_switch_refusals.txt
+
+# People, places, faces and memory
+backend/phonebook.json
+backend/address_book.json
+backend/github_repos.json
+backend/calendar.json
+backend/alarms.json
+backend/hearing_words.json
+backend/memory/
+backend/security/
+backend/knowledge/
+backend/appearance.json
+
+# What Echo did
+backend/approvals.json
+backend/projects.json
+backend/usage_log.json
+backend/call_attempts.json
+backend/canvas_state.json
+backend/model3d_state.json
+
+# Plugin data (only the TRELLIS workflow reference files belong in the repo)
+backend/plugins_data/*.json
+!backend/plugins_data/trellis2_api_workflow_reference.json
+backend/plugins_data/generated_images/
+backend/plugins_data/generated_3d_models/
