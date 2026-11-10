@@ -28,6 +28,14 @@ The clean-up release. It was meant to run smoother, faster and better - and to b
 
 Hears far better (even through a cheap mic), builds apps and runs code on its own in a sandbox - only with your approval - controls the PC, the TV and Netflix, screens unknown callers, reports on the PC's health and its own, and has a brand-new dashboard: a living 3D orb with a moon for every switch you turn on, Mission Control, a Live panel, a camera view, night mode and colors you choose (the old look is one click away). One-click `SETUP.bat`.
 
+## [`echo-7/`](echo-7/) - Echo-7, cleaned
+
+The clean-up of the big update: everything echo-6 does, at least as fast, but lighter - the server loads
+19% faster with 27% less memory and 90% less reserved memory (heavy camera, screenshot and web libraries
+now load only when first used), and the dashboard stops doing work it doesn't need to. Adds **seasonal
+mode**: open Echo in December and it offers Christmas mode - a red theme, gentle snow, and "All I Want for
+Christmas Is You" if Spotify is connected (plus New Year's, Valentine's and Halloween).
+
 ## Security fix for every version
 
 If you run any version with phone calling: the public ngrok tunnel used for calls used to forward
@@ -38,7 +46,7 @@ automatically. Update to the current files. Details in [`echo-6/README.md`](echo
 
 ## Which one should I run?
 
-`echo-6`, unless you have a specific reason to want an earlier version's exact behavior. Each version's own README has full setup instructions - go to [`echo-6/README.md`](echo-6/README.md) and start there.
+`echo-7`, unless you have a specific reason to want an earlier version's exact behavior. Start with [`echo-7/README.md`](echo-7/README.md); the full guide to what Echo can do is [`echo-6/README.md`](echo-6/README.md).
 
 ## License
 

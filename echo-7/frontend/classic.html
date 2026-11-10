@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Echo (classic)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="clock" id="clock">--:--:--</div>
+
+  <div class="layout">
+  <aside class="thought-panel" id="thoughtPanel">
+    <h2 class="side-heading">Thinking</h2>
+    <div class="mic-line" id="micLine" title="The mic Echo is listening on, and how loud it hears you. The mark is how loud speech has to be to count.">
+      <span id="micName" class="mic-name">mic: checking...</span>
+      <span class="mic-meter"><span id="micLevel" class="mic-level"></span><span class="mic-mark"></span></span>
+    </div>
+    <ol class="thought-log" id="thoughtLog"></ol>
+  </aside>
+
+  <aside class="phonebook-area" id="phoneBookPanel">
+    <h2 class="side-heading">Phone Book <span id="pbCount" class="side-count"></span></h2>
+    <form id="phoneBookForm" class="phonebook-form">
+      <label class="field-line">
+        <span class="field-label">name:</span>
+        <input type="text" id="pbName" required />
+      </label>
+      <label class="field-line">
+        <span class="field-label">number:</span>
+        <input type="tel" id="pbNumber" placeholder="+1 555 123 4567" required />
+      </label>
+      <button type="submit" class="hud-btn">Add</button>
+    </form>
+    <ul id="phoneBookList" class="phonebook-list"></ul>
+    <details class="blocked-calls" id="blockedCalls" hidden>
+      <summary>Turned-away calls <span id="blockedCount"></span></summary>
+      <ul id="blockedCallsList" class="blocked-list"></ul>
+    </details>
+    <p class="hint-text">
+      Say "Echo, call &lt;name&gt; about &lt;subject&gt;" and Echo greets them by name and opens
+      with the subject. Only numbers listed here (or ones you say directly) can be called.
+      <strong>can call Echo</strong> controls who may phone Echo: contacts switched on are let in
+      (and greeted by name); contacts switched off are turned away. A number that isn't saved here
+      is asked who they are and what it's about, then saved with calling off - in red, marked
+      <strong>SCAM</strong>, if it sounded like one (click the tag to clear it).
+    </p>
+
+    <details class="address-book" id="addressBook" open>
+      <summary class="side-heading">Address Book <span id="abCount" class="side-count"></span></summary>
+      <form id="addressForm" class="phonebook-form">
+        <label class="field-line"><span class="field-label">name:</span><input type="text" id="abName" placeholder="home, gym, favorite restaurant" required /></label>
+        <label class="field-line"><span class="field-label">address:</span><input type="text" id="abAddress" required /></label>
+        <button type="submit" class="hud-btn">Save place</button>
+      </form>
+      <ul id="addressList" class="phonebook-list address-list"></ul>
+    </details>
+
+    <section class="toggles-panel" id="togglesPanel">
+      <h2 class="side-heading">Toggles <span id="toggleCount" class="side-count"></span></h2>
+      <input type="search" id="toggleFilter" class="toggle-filter" placeholder="Filter toggles..." autocomplete="off" />
+      <div class="quick-toggles" id="quickToggles">
+        <h3 class="tab-subheading">Core</h3>
+        <label class="switch-row"><span>Echo enabled</span><input type="checkbox" id="toggle-ai_enabled" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Also listen via this tab's mic</span><input type="checkbox" id="toggle-dashboard-mic" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Screen access</span><span class="vram-tag">~6 GB when used</span><input type="checkbox" id="toggle-screen_access" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Camera access</span><span class="vram-tag">~6 GB when used</span><input type="checkbox" id="toggle-camera_access" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Desk Guard</span><span class="vram-tag">&lt;1 GB</span><input type="checkbox" id="toggle-desk_guard_enabled" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Calling</span><span class="vram-tag">no local model</span><input type="checkbox" id="toggle-calling_enabled" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Unanswered-call notifications</span><span class="vram-tag">no local model</span><input type="checkbox" id="toggle-call_notifications_enabled" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Screen unknown callers</span><span class="vram-tag">asks who they are, adds them (calling off)</span><input type="checkbox" id="toggle-screen_unknown_callers" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Echo suggests projects</span><span class="vram-tag">only suggests - you approve</span><input type="checkbox" id="toggle-agent_suggestions_enabled" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Sir Page</span><span class="vram-tag">phones you when something happens</span><input type="checkbox" id="toggle-sir_page_enabled" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Two replies at once</span><span class="vram-tag">+~1 GB VRAM, restarts Ollama</span><input type="checkbox" id="toggle-ollama_parallel_2_enabled" /><span class="switch"></span></label>
+        <button type="button" id="toggle-location_mode" class="hud-btn location-cycle-btn">Location: OFF (click to change)</button>
+        <label class="switch-row"><span>Browser control</span><span class="vram-tag">no local model</span><input type="checkbox" id="toggle-browser_control_enabled" /><span class="switch"></span></label>
+        <label class="switch-row"><span>&nbsp;&nbsp;&rarr; allow direct screen-control fallback</span><span class="vram-tag">~6 GB when used</span><input type="checkbox" id="toggle-browser_pixel_fallback_enabled" /><span class="switch"></span></label>
+        <label class="switch-row"><span>Code canvas</span><span class="vram-tag">no local model</span><input type="checkbox" id="toggle-code_canvas_enabled" /><span class="switch"></span></label>
+        <label class="switch-row"><span>VR Mode</span><span class="vram-tag">no local model</span><input type="checkbox" id="toggle-vr_mode_enabled" /><span class="switch"></span></label>
+        <h3 class="tab-subheading">Plugins</h3>
+        <div id="pluginsListConnected"></div>
+        <div id="pluginsListStandalone"></div>
+      </div>
+      <p id="ollamaStatus" class="hint-text"></p>
+      <p id="settingsError" class="hint-text error"></p>
+      <p id="pluginsError" class="hint-text error"></p>
+    </section>
+  </aside>
+
+  <div class="col-divider"></div>
+
+  <main>
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <div class="status-strip">
+      <span class="indicator" id="ind-ai_enabled" data-label="AI">AI</span>
+      <span class="indicator" id="ind-screen_access" data-label="SCR">SCR</span>
+      <span class="indicator" id="ind-camera_access" data-label="CAM">CAM</span>
+      <span class="indicator" id="ind-desk_guard_enabled" data-label="GRD">GRD</span>
+      <span class="indicator" id="ind-calling_enabled" data-label="CALL">CALL</span>
+      <span class="indicator" id="ind-call_notifications_enabled" data-label="NOTIFY">NOTIFY</span>
+      <span class="indicator" id="ind-sir_page_enabled" data-label="PAGE">PAGE</span>
+      <span class="indicator" id="ind-location_mode" data-label="LOC">LOC: OFF</span>
+      <span class="indicator" id="ind-browser_control_enabled" data-label="BRWS">BRWS</span>
+      <span class="indicator" id="ind-code_canvas_enabled" data-label="CODE">CODE</span>
+    </div>
+
+    <h1 class="brand">ECHO</h1>
+
+    <div id="core" class="core">
+      <div class="ring ring-dashed"></div>
+      <div class="ring ring2"></div>
+      <div class="ring ring3 ring-dashed"></div>
+    </div>
+    <div id="status">Initializing...</div>
+    <div id="log"></div>
+
+    <div class="controls">
+      <label class="hud-btn">
+        Attach photo / video
+        <input type="file" id="fileInput" accept="image/*,video/*" hidden />
+      </label>
+      <button id="enrollBtn" class="hud-btn" type="button">Enroll my face</button>
+      <span id="enrollResult" class="hint-text"></span>
+    </div>
+
+    <div class="control-panel">
+      <div class="tab-bar" role="tablist">
+        <button type="button" class="tab-btn active" data-tab="settings">Notes</button>
+        <button type="button" class="tab-btn" data-tab="connections">Connections</button>
+        <button type="button" class="tab-btn" data-tab="audio">Audio</button>
+        <button type="button" class="tab-btn" data-tab="setup">Setup <span id="setupBadge" class="tab-badge" hidden></span></button>
+        <button type="button" class="tab-btn" data-tab="projects">Projects <span id="approvalBadge" class="tab-badge" hidden></span></button>
+      </div>
+
+      <div class="tab-panel" id="tab-settings">
+        <h3 class="tab-subheading">What the toggles do</h3>
+        <p class="hint-text">All switches live in the <strong>Toggles</strong> panel under the phone book - hover a row for its memory cost.</p>
+        <p class="hint-text"><strong>Also listen via this tab's mic</strong> - off by default: the always-on background listener already hears you, so leaving both on can make Echo answer twice from two slightly different transcriptions of the same thing.</p>
+        <p class="hint-text"><strong>Sir Page</strong> - when on, Echo phones <em>you</em> and says what happened: an unknown number (or a contact whose access is off) called and was turned away, an allowed contact is on a call with Echo, or Desk Guard saw someone it didn't recognize and locked the computer. This only limits how often Echo rings <em>you</em>: the same event isn't repeated within 10 minutes, and unknown-number alerts are held to 6 an hour (extras are counted and mentioned on your next call). Desk Guard alerts are never held back, and allowed contacts can call Echo as often and as long as they like. Needs calling set up.</p>
+        <p class="hint-text"><strong>Two replies at once</strong> - Ollama normally works on one request at a time, so a call's reply holds up the next caller and your own voice commands. On, it works on two at once (each runs a little slower while both are active) for about 1 GB more VRAM. Switching it restarts Ollama (about 20 seconds) and is refused while a phone call is in progress. Off by default.</p>
+        <p class="hint-text"><strong>Location</strong> - click cycles OFF &rarr; PC &rarr; PHONE &rarr; OFF. Only the device matching the current mode shares its position. No local model.</p>
+        <p class="hint-text"><strong>Browser control</strong> - lets Echo click and type in your active browser tab through his own on-screen cursor when you ask him to; it never touches your real mouse. The direct screen-control fallback takes pixel-level control for pages it can't otherwise read (reusing the same vision model as Screen/Camera access), and always shows an on-screen warning you must approve first.</p>
+        <p class="hint-text"><strong>Code canvas</strong> - lets Echo build a real, live website/app/demo and show it in a preview panel when you ask. Rendered sandboxed, with no access to this dashboard.</p>
+        <p class="hint-text"><strong>VR Mode</strong> - for viewing this dashboard in a VR headset via Virtual Desktop: trusts the headset's own microphone (normally blocked, since it's usually a sign the real default mic got silently swapped for a virtual one). Turn this on before putting the headset on, off when done - requires restarting Echo to take effect either way.</p>
+        <p class="hint-text"><strong>Plugins</strong> work from the dashboard and the voice listener, and on phone calls only for a phone book contact with the gold <strong>sir</strong> switch on (and only plugins built for it, like apps, Spotify, the TV, projects and shutdown). New plugins dropped into <code>backend/plugins/</code> appear in the Toggles panel automatically. Plugins that need an account show which connection they need on hover.</p>
+      </div>
+
+      <div class="tab-panel" id="tab-connections" hidden>
+        <div id="connectionsList"></div>
+        <p class="hint-text" id="connectionsStatusMsg"></p>
+      </div>
+
+      <div class="tab-panel" id="tab-setup" hidden>
+        <p class="hint-text">Everything Echo needs, checked live. Green is ready. "Fix it" only downloads official files or rebuilds Echo's own model.</p>
+        <ul id="setupList" class="setup-list"></ul>
+      </div>
+
+      <div class="tab-panel" id="tab-projects" hidden>
+        <div id="approvalsBox" class="approvals-box" hidden>
+          <h3 class="tab-subheading">Waiting for your OK</h3>
+          <ul id="approvalsList" class="approvals-list"></ul>
+        </div>
+        <h3 class="tab-subheading">Projects</h3>
+        <ul id="projectsList" class="projects-list"></ul>
+        <p class="hint-text">
+          Ask "Echo, make me an app that..." or "research the best..." and Echo works on it in the background,
+          checks its own work in a sandbox, and tells you when it's done. Asking is your approval for 24 hours;
+          anything Echo wants to do on its own shows up above for you to approve. Approving by phone needs your passcode.
+        </p>
+      </div>
+
+      <div class="tab-panel" id="tab-audio" hidden>
+        <h3 class="tab-subheading">Words Echo should know</h3>
+        <p class="hint-text">Names Echo keeps mishearing - a YouTuber, a friend, a game. Echo also learns names on its own from your phone book, address book and what you ask it to play.</p>
+        <form id="wordForm" class="phrase-row">
+          <input type="text" id="wordInput" placeholder="e.g. The Burnt Peanut" autocomplete="off" />
+          <button type="submit" class="hud-btn">Add</button>
+        </form>
+        <ul id="wordList" class="word-list"></ul>
+        <p class="hint-text" id="learnedWords"></p>
+        <p class="hint-text" id="audioStatusMsg"></p>
+        <label class="field-row">
+          <span>Microphone</span>
+          <select id="micSelect"></select>
+        </label>
+        <div class="level-meter"><div id="levelBar" class="level-fill"></div></div>
+        <label class="field-row">
+          <span>Speaker output</span>
+          <select id="speakerSelect"></select>
+        </label>
+        <p class="hint-text">
+          This panel previews devices through your browser tab only - it can't change what
+          the always-on background listener (the thing that actually hears "Echo") uses,
+          since that runs outside the browser and always follows Windows' default recording
+          device. To change which mic Echo listens through, set it as default in Windows
+          Sound settings.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <div id="projectModal" class="project-modal" hidden>
+    <div class="project-modal-box">
+      <div class="project-modal-head">
+        <span id="projectModalTitle" class="side-heading"></span>
+        <span id="projectModalStatus" class="side-count"></span>
+        <button type="button" id="projectStopBtn" class="hud-btn">Stop</button>
+        <button type="button" id="projectCloseBtn" class="hud-btn">Close</button>
+      </div>
+      <div class="project-modal-body">
+        <iframe id="projectFrame" title="Echo's project" sandbox="allow-scripts allow-modals allow-pointer-lock"></iframe>
+        <div class="project-modal-side">
+          <h3 class="tab-subheading">What Echo did</h3>
+          <ol id="projectLog" class="thought-log project-log"></ol>
+          <p id="projectFiles" class="hint-text"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-divider"></div>
+
+  <div class="canvas-column">
+    <aside class="canvas-area" id="canvasPanel" hidden>
+      <h2 class="side-heading">Canvas <span id="canvasTitle" class="side-count"></span></h2>
+      <div class="canvas-frame-wrap">
+        <iframe id="canvasFrame" sandbox="allow-scripts" title="Echo canvas preview"></iframe>
+      </div>
+      <p class="hint-text">
+        Live preview of a page Echo builds when asked to make a website, app, or visual demo -
+        sandboxed, no access to this dashboard or your real browser.
+      </p>
+    </aside>
+
+    <aside class="canvas-area model3d-area" id="model3dPanel" hidden>
+      <h2 class="side-heading">3D Canvas <span id="model3dTitle" class="side-count"></span></h2>
+      <div class="model3d-frame-wrap">
+        <canvas id="model3dCanvas"></canvas>
+      </div>
+      <p class="hint-text">
+        Live preview of a 3D model Echo generates when asked - drag to orbit, scroll to zoom.
+      </p>
+    </aside>
+  </div>
+  </div>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="model3d-viewer.js"></script>
+  <script src="app.js" defer></script>
+  <!-- Classic look. The orb look is index.html; this button switches back to it and remembers. -->
+  <button type="button" class="hud-btn new-look-btn" id="newLookBtn">Try the orb look</button>
+  <script>
+    document.getElementById("newLookBtn").addEventListener("click", async () => {
+      try { localStorage.setItem("echo_layout", "orb"); } catch (err) {}
+      try {
+        await fetch("/api/appearance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ layout: "orb" }) });
+      } catch (err) {}
+      location.href = "/";
+    });
+  </script>
+</body>
+</html>
