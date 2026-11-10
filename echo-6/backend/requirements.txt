@@ -13,4 +13,5 @@ pystray
 pillow
 sounddevice
 faster-whisper
-pygamepychromecast
+pygame
+pychromecast
